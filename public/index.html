@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorio de Redes - Chat UMG</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --success: #22c55e;
+            --server: #8b5cf6;
+            --chat-me: #0284c7;
+        }
+        
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Modal de Login */
+        #login-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(15, 23, 42, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .login-box {
+            background-color: var(--panel-bg);
+            padding: 30px 40px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.2);
+            border: 1px solid var(--accent);
+            width: 320px;
+        }
+
+        .login-box input {
+            width: 90%;
+            padding: 12px;
+            margin: 10px 0 20px 0;
+            border-radius: 6px;
+            border: 1px solid #334155;
+            background-color: #0f172a;
+            color: white;
+            text-align: center;
+            font-size: 15px;
+            outline: none;
+        }
+
+        .login-box input:focus { border-color: var(--accent); }
+        .login-box label { display: block; text-align: left; font-size: 13px; color: var(--text-muted); margin-left: 5%; }
+
+        /* Header */
+        header {
+            width: 100%;
+            background-color: var(--panel-bg);
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border-bottom: 2px solid var(--accent);
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+
+        .header-title { display: flex; align-items: center; gap: 15px; }
+        .logo-container img { height: 50px; }
+        h1 { margin: 0; font-size: 20px; color: var(--accent); }
+        .team-names { color: var(--text-muted); font-size: 13px; text-align: right;}
+
+        /* Contenedor Principal (Vista Horizontal) */
+        .main-container {
+            display: flex;
+            flex-direction: row;
+            flex: 1;
+            padding: 20px;
+            gap: 20px;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        /* Columna Izquierda: Topología */
+        .topology-panel {
+            flex: 1;
+            background-color: var(--panel-bg);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            overflow-y: auto;
+        }
+
+        .topology-title {
+            color: var(--text-muted);
+            margin-bottom: 30px;
+            font-size: 16px;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 10px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .server-node {
+            background-color: var(--server);
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .clients-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+
+        .client-node {
+            background-color: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            padding: 15px;
+            width: 150px;
+            text-align: center;
+            position: relative;
+        }
+
+        .connection-line {
+            position: absolute;
+            top: -40px;
+            left: 50%;
+            width: 2px;
+            height: 40px;
+            background: linear-gradient(to bottom, var(--server), var(--success));
+        }
+
+        .client-icon { font-size: 30px; margin-bottom: 10px; }
+        .client-name { font-weight: bold; font-size: 16px; margin-bottom: 5px;}
+
+        /* Columna Derecha: Panel de Chat */
+        .chat-panel {
+            flex: 1;
+            background-color: var(--panel-bg);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            overflow: hidden;
+            border: 1px solid #334155;
+        }
+
+        .chat-header {
+            background-color: rgba(0,0,0,0.3);
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            border-bottom: 1px solid #334155;
+            color: var(--accent);
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            position: relative;
+            line-height: 1.4;
+        }
+
+        .msg-system {
+            background-color: rgba(34, 197, 94, 0.1);
+            color: var(--success);
+            align-self: center;
+            font-size: 12px;
+            font-family: monospace;
+            text-align: center;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            padding: 8px 15px;
+            border-radius: 20px;
+        }
+
+        .chat-input-area {
+            display: flex;
+            padding: 15px;
+            background-color: rgba(0,0,0,0.3);
+            gap: 10px;
+            border-top: 1px solid #334155;
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            padding: 12px 15px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+            background-color: #0f172a;
+            color: white;
+            outline: none;
+            font-size: 14px;
+        }
+
+        .chat-input-area input:focus { border-color: var(--accent); }
+
+        button {
+            background-color: var(--accent);
+            color: #000;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 14px;
+        }
+
+        button:hover { background-color: #0ea5e9; }
+        button:disabled { background-color: #334155; color: #94a3b8; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+    <!-- Pantalla de Ingreso (Datos Reales) -->
+    <div id="login-overlay">
+        <div class="login-box">
+            <h2 style="margin-top:0; color: var(--accent);">Conexión al Servidor</h2>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 25px;">Ingresa tus credenciales de red</p>
+            
+            <label for="username-input">Nombre de Usuario:</label>
+            <input type="text" id="username-input" placeholder="Ej. Andersson" autocomplete="off">
+            
+            <label for="ip-input">Dirección IP Local (IPv4):</label>
+            <input type="text" id="ip-input" placeholder="Ej. 192.168.100.2" autocomplete="off">
+            
+            <button onclick="conectarRed()">Conectar</button>
+        </div>
+    </div>
+
+    <!-- Encabezado -->
+    <header>
+        <div class="header-title">
+            <div class="logo-container">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/1/15/Escudo_de_la_universidad_Mariano_G%C3%A1lvez_Guatemala.svg" alt="Logo UMG">
+            </div>
+            <h1>Servidor de Comunicaciones LAN</h1>
+        </div>
+        <div class="team-names">Desarrollado por:<br><span style="color: var(--accent);">Andersson | Minor | Daniel</span></div>
+    </header>
+
+    <!-- Contenedor Principal -->
+    <div class="main-container">
+        
+        <!-- Columna Izquierda: Topología -->
+        <div class="topology-panel">
+            <div class="topology-title">Mapa de Red en Vivo</div>
+            <div class="server-node">
+                🖥️ SRV-FEDORA (Host)<br>
+                <span style="font-size: 13px; font-weight: normal; color: #cbd5e1;">192.168.100.1</span>
+            </div>
+            <div class="clients-container" id="network-clients"></div>
+        </div>
+
+        <!-- Columna Derecha: Panel de Chat -->
+        <div class="chat-panel">
+            <div class="chat-header">Terminal de Chat (Puerto 8080)</div>
+            <div class="chat-messages" id="chat-box"></div>
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Escribe un mensaje para la red..." onkeypress="manejarEnter(event)" disabled>
+                <button id="send-btn" onclick="enviarMensaje()" disabled>Enviar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Importar la librería cliente de WebSockets -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let miUsuario = {};
+
+        function conectarRed() {
+            const inputNombre = document.getElementById('username-input').value.trim();
+            const inputIP = document.getElementById('ip-input').value.trim();
+
+            if (!inputNombre || !inputIP) {
+                alert("Por favor, ingresa tu nombre y tu dirección IP.");
+                return;
+            }
+
+            miUsuario = { nombre: inputNombre, ip: inputIP };
+
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('chat-input').disabled = false;
+            document.getElementById('send-btn').disabled = false;
+            document.getElementById('chat-input').focus();
+
+            socket.emit('unirse-red', miUsuario);
+        }
+
+        socket.on('actualizar-topologia', (usuarios) => {
+            const contenedor = document.getElementById('network-clients');
+            contenedor.innerHTML = '';
+
+            usuarios.forEach(user => {
+                const esMiPC = user.id === socket.id;
+                contenedor.innerHTML += `
+                    <div class="client-node" style="${esMiPC ? 'border-color: var(--success); box-shadow: 0 0 15px rgba(34, 197, 94, 0.2);' : ''}">
+                        <div class="connection-line"></div>
+                        <div class="client-icon">💻</div>
+                        <div class="client-name" style="color: ${esMiPC ? 'var(--success)' : 'var(--text-main)'}">${user.nombre}</div>
+                        <div class="client-ip" style="color: var(--accent); font-family: monospace; font-size: 13px;">${user.ip}</div>
+                    </div>
+                `;
+            });
+        });
+
+        function manejarEnter(event) { if (event.key === 'Enter') enviarMensaje(); }
+
+        function enviarMensaje() {
+            const input = document.getElementById('chat-input');
+            const texto = input.value.trim();
+            
+            if (texto !== '') {
+                socket.emit('enviar-mensaje', { autor: miUsuario.nombre, ip: miUsuario.ip, id: socket.id, texto: texto });
+                input.value = '';
+            }
+        }
+
+        socket.on('nuevo-mensaje', (data) => {
+            const chatBox = document.getElementById('chat-box');
+            const esMio = data.id === socket.id;
+            
+            chatBox.innerHTML += `
+                <div class="message" style="${esMio ? 'background-color: var(--chat-me); align-self: flex-end; border-bottom-right-radius: 0; color: white;' : 'background-color: #334155; align-self: flex-start; border-bottom-left-radius: 0;'}">
+                    <div style="font-size: 11px; color: ${esMio ? 'rgba(255,255,255,0.7)' : 'var(--accent)'}; margin-bottom: 4px; font-weight: bold;">
+                        ${esMio ? 'Tú' : data.autor} (${data.ip})
+                    </div>
+                    <div>${data.texto}</div>
+                </div>
+            `;
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+
+        socket.on('mensaje-sistema', (texto) => {
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML += `<div class="message msg-system">> ${texto}</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+    </script>
+</body>
+</html>
